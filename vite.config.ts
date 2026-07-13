@@ -5,7 +5,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig(() => {
   return {
-    base: '/',
+    base: './',
 
     plugins: [
       react(),
@@ -19,10 +19,7 @@ export default defineConfig(() => {
     },
 
     server: {
-      // HMR desativável no Google AI Studio através da variável DISABLE_HMR.
       hmr: process.env.DISABLE_HMR !== 'true',
-
-      // Desativa a monitorização de ficheiros quando DISABLE_HMR está ativa.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
   };
