@@ -1,0 +1,6 @@
+{
+  "name": "Torneio de Valdevez",
+  "description": "Jogo medieval de torneios e conquista territorial baseado no histórico Recontro de Valdevez de 1141.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
