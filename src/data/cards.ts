@@ -24,14 +24,14 @@ export const historyCards: HistoryCard[] = [
     id: "prozelo",
     title: "O Pão do Vez",
     type: "Natureza",
-    text: "Os moinhos de Prozelo, aninhados ao longo de canais rápidos de água, moíam o milho e o trigo que alimentavam os homens de armas de D. Afonso Henriques. A resistência de um exército começa na sua nutrição, e Prozelo foi o celeiro da liça.",
+    text: "Os moinhos de Prozelo, aninhados ao longo de canais rápidos de água, moíam o milho e o trigo que alimentavam as nossas forças na liça. A resistência de um exército começa na sua nutrição, e Prozelo foi o celeiro do recontro.",
     locationId: "prozelo",
   },
   {
     id: "paco",
     title: "A Lealdade Sólida",
     type: "Cavalaria",
-    text: "Nos solares e casas senhoriais de Paçô, os cavaleiros locais recusaram render vassalagem ao rei Afonso VII de Leão e Castela. Foram os primeiros a desembainhar as espadas e a marchar sob a bandeira de D. Afonso Henriques.",
+    text: "Nos solares e casas senhoriais de Paçô, os cavaleiros locais recusaram render vassalagem ao exército inimigo. Foram os primeiros a desembainhar as espadas e a marchar corajosamente sob o nosso estandarte.",
     locationId: "paco",
   },
   {
@@ -45,14 +45,14 @@ export const historyCards: HistoryCard[] = [
     id: "jolda",
     title: "O Escudo do Lima",
     type: "Território",
-    text: "Jolda marcava a fronteira sul, onde as águas calmas do rio Lima formavam uma barreira natural contra as hostes castelhanas. Ao defender Jolda, os cavaleiros asseguravam que o exército de Afonso Henriques não seria cercado pela retaguarda.",
+    text: "Jolda marcava a fronteira sul, onde as águas calmas do rio Lima formavam uma barreira natural contra as hostes adversárias. Ao defender Jolda, os cavaleiros asseguravam que as nossas forças não seriam cercadas pela retaguarda.",
     locationId: "jolda",
   },
   {
     id: "tavora",
     title: "O Convento da Tradição",
     type: "Património",
-    text: "O histórico Mosteiro de Távora detinha vastas terras agrícolas e criava os cavalos mais ágeis da região. O abade beneditino benzeu as lanças dos cavaleiros de D. Afonso Henriques, outorgando-lhes legitimidade espiritual.",
+    text: "O histórico Mosteiro de Távora detinha vastas terras agrícolas e criava os cavalos mais ágeis da região. O abade beneditino benzeu as lanças dos nossos cavaleiros, outorgando-lhes legitimidade espiritual na contenda.",
     locationId: "tavora",
   },
   {
@@ -141,9 +141,9 @@ export const historyCards: HistoryCard[] = [
   },
   {
     id: "veigas_matanca",
-    title: "Combate ao Imperador",
+    title: "Combate ao Rei D. Afonso VII",
     type: "História",
-    text: "Nas Veigas da Matança, o confronto final contra as forças imperiais do próprio Imperador D. Afonso VII sela de forma definitiva a vitória épica portuguesa e a honra nacional no Recontro de Valdevez.",
+    text: "Nas Veigas da Matança, o confronto final contra as forças do rei D. Afonso VII sela de forma definitiva a vitória épica portuguesa e a honra nacional no Recontro de Valdevez.",
     locationId: "veigas_matanca",
   }
 ];
