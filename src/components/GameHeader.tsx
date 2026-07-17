@@ -5,6 +5,8 @@
 
 import { Player } from '../types';
 import { Map, Swords, BookOpen, User, Coins, Award, Compass, Shield, Volume2, VolumeX, HelpCircle } from 'lucide-react';
+import guerreiroPortucal from '../../assets/guerreiro-portucal.png';
+import guerreiroCastela from '../../assets/guerreiro-castela.png';
 
 interface GameHeaderProps {
   player: Player;
@@ -42,9 +44,11 @@ export default function GameHeader({
           className="flex items-center gap-3 text-left hover:brightness-110 active:scale-98 transition-all cursor-pointer focus:outline-none group relative border border-transparent hover:border-medieval-gold/30 rounded-xl p-1 -m-1"
           title="Voltar ao Ecrã Inicial (Mudar Nome / Recomeçar)"
         >
-          <div className="w-10 h-10 bg-sky-950/80 border border-medieval-gold flex items-center justify-center rounded-lg shrink-0 shadow-md overflow-hidden relative group-hover:border-medieval-gold-light transition-colors">
+          <div className={`w-10 h-10 border border-medieval-gold flex items-center justify-center rounded-lg shrink-0 shadow-md overflow-hidden relative group-hover:border-medieval-gold-light transition-colors ${
+            player.faction === 'leao' ? 'bg-amber-950/80' : 'bg-sky-950/80'
+          }`}>
             <img
-              src="https://lh3.googleusercontent.com/d/1n9vtT_gDUH1IZcAw0eq7VJnMCC3FNExd"
+              src={player.faction === 'leao' ? guerreiroCastela : guerreiroPortucal}
               alt="Vosso Cavaleiro"
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover object-top"

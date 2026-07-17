@@ -23,7 +23,7 @@ const CAMPAIGNS = [
     name: 'A Jornada Começa',
     icon: '🛡️',
     difficulty: 1,
-    description: 'Começai a vossa jornada vigiando as encostas e as pequenas freguesias junto ao rio, onde as guarnições castelhanas testam as nossas defesas.',
+    description: 'Começai a vossa jornada vigiando as encostas e as pequenas freguesias junto ao rio, onde as guarnições inimigas testam as nossas defesas.',
     colorClass: 'border-sky-500/30 hover:border-sky-500/80 shadow-sky-950/20',
     accentColor: 'text-sky-400',
     bgColor: 'bg-sky-950/30',
@@ -49,7 +49,7 @@ const CAMPAIGNS = [
     name: 'As Honras de Valdevez',
     icon: '🏰',
     difficulty: 3,
-    description: 'Adentrai nas honras tradicionais do vale, onde solares de granito e montes escarpados formam os baluartes da nossa nobreza portucalense.',
+    description: 'Adentrai nas honras tradicionais do vale, onde solares de granito e montes escarpados formam os baluartes da nobreza local aliada.',
     colorClass: 'border-amber-500/30 hover:border-amber-500/80 shadow-amber-950/20',
     accentColor: 'text-amber-400',
     bgColor: 'bg-amber-950/30',
@@ -75,7 +75,7 @@ const CAMPAIGNS = [
     name: 'O Recontro de Valdevez',
     icon: '🦅',
     difficulty: 5,
-    description: 'A hora decisiva chegou! No campo histórico do Recontro, defrontai os mais formidáveis cavaleiros de Castela e o próprio Imperador D. Afonso VII.',
+    description: 'A hora decisiva chegou! No campo histórico do Recontro, defrontai os mais formidáveis cavaleiros adversários e o seu comandante supremo no embate final.',
     colorClass: 'border-emerald-500/30 hover:border-emerald-500/80 shadow-emerald-950/20',
     accentColor: 'text-emerald-400',
     bgColor: 'bg-emerald-950/30',
@@ -255,7 +255,10 @@ export default function MapView({
             Campanhas do Torneio
           </h1>
           <p className="text-xs md:text-sm max-w-2xl mx-auto px-4 mt-2 font-serif leading-relaxed italic text-amber-950/80">
-            "Escolhei o vosso teatro de guerra militar. Cavalgai pelas freguesias de Valdevez para acumular ouro, honra perante o Infante D. Afonso Henriques e selar o vosso nome na história de Portugal."
+            {player.faction === 'leao'
+              ? '"Escolhei o vosso teatro de guerra militar. Cavalgai pelas freguesias de Valdevez para acumular ouro, honra perante o Imperador D. Afonso VII e selar o vosso nome na história do reino."'
+              : '"Escolhei o vosso teatro de guerra militar. Cavalgai pelas freguesias de Valdevez para acumular ouro, honra perante o Infante D. Afonso Henriques e selar o vosso nome na história de Portugal."'
+            }
           </p>
         </div>
 

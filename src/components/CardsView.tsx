@@ -25,6 +25,34 @@ export default function CardsView({ player }: CardsViewProps) {
     return loc ? loc.name : 'Terras Desconhecidas';
   };
 
+  const getDynamicCardTitle = (cardId: string, baseTitle: string) => {
+    if (player.faction === 'leao') {
+      if (cardId === 'veigas_matanca') {
+        return "Desafio ao Infante";
+      }
+    }
+    return baseTitle;
+  };
+
+  const getDynamicCardText = (cardId: string, baseText: string) => {
+    if (player.faction === 'leao') {
+      if (cardId === 'giela') {
+        return "O Paço de Giela, com a sua torre de menagem medieval de granito, testemunhou a afirmação da nobreza e das guarnições locais. É o símbolo de uma nobreza que resistiu para preservar a integridade das terras fronteiriças do reino.";
+      }
+      if (cardId === 'valdevez') {
+        return "Nas margens do Vez, em 1141, as forças do rei D. Afonso VII e de Afonso Henriques evitaram uma batalha destrutiva através de um torneio de cavaleiros. O 'Bofordiar' das lanças decidiu a sorte do território, selando a paz sob a égide imperial.";
+      }
+      if (cardId === 'veigas_matanca') {
+        return "Nas Veigas da Matança, o confronto final entre os mais bravos cavaleiros de ambas as hostes sela de forma definitiva a vossa vitória épica, honrando as forças do rei D. Afonso VII no Recontro de Valdevez.";
+      }
+    } else {
+      if (cardId === 'veigas_matanca') {
+        return "Nas Veigas da Matança, o confronto final contra as forças do rei D. Afonso VII sela de forma definitiva a vitória épica do Condado Portucalense e a honra da vossa causa no Recontro de Valdevez.";
+      }
+    }
+    return baseText;
+  };
+
   // Filter cards
   const filteredCards = historyCards.filter(card => {
     const unlocked = isCardUnlocked(card);
@@ -124,10 +152,10 @@ export default function CardsView({ player }: CardsViewProps) {
                   <div className="space-y-1.5 mt-0.5">
                     <h4 className="font-serif font-bold text-base text-medieval-gold-light leading-tight flex items-center gap-1.5">
                       <BookOpen className="w-3.5 h-3.5 text-medieval-gold shrink-0" />
-                      {card.title}
+                      {getDynamicCardTitle(card.id, card.title)}
                     </h4>
                     <p className="text-xs text-medieval-text/90 leading-relaxed font-serif text-justify pt-0.5 pl-2 border-l-2 border-medieval-gold/30">
-                      {card.text}
+                      {getDynamicCardText(card.id, card.text)}
                     </p>
                   </div>
                 ) : (

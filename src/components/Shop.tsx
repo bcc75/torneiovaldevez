@@ -22,10 +22,28 @@ export default function Shop({ player, onPurchase }: ShopProps) {
     : shopItems.filter(item => item.category === activeCategory && item.cost > 0);
 
   const handleBuyItem = (item: ShopItem) => {
-    if (player.coins < item.cost) return;
+    const isTraining = item.category === 'training';
+    const currency = item.costCurrency || 'coins';
+    const currencyValue = currency === 'influence'
+      ? player.influence
+      : currency === 'honor'
+      ? player.honor
+      : player.coins;
+
+    if (currencyValue < item.cost) return;
 
     const updatedPurchased = [...player.purchasedItems, item.id];
-    let newCoins = player.coins - item.cost;
+    let newCoins = player.coins;
+    let newHonor = player.honor;
+    let newInfluence = player.influence;
+
+    if (currency === 'influence') {
+      newInfluence -= item.cost;
+    } else if (currency === 'honor') {
+      newHonor -= item.cost;
+    } else {
+      newCoins -= item.cost;
+    }
     
     // Core attributes modifiers
     let newAttack = player.attack;
@@ -53,6 +71,8 @@ export default function Shop({ player, onPurchase }: ShopProps) {
     const updatedPlayer: Player = {
       ...player,
       coins: newCoins,
+      honor: newHonor,
+      influence: newInfluence,
       purchasedItems: updatedPurchased,
       weapon: newWeapon,
       armor: newArmor,
@@ -101,12 +121,31 @@ export default function Shop({ player, onPurchase }: ShopProps) {
   return (
     <div id="shop-container" className="h-full w-full bg-medieval-panel text-medieval-text rounded-2xl border-4 border-medieval-border p-4 shadow-2xl relative flex flex-col overflow-hidden medieval-border">
       {/* Wood Texture/Accent Header */}
-      <div className="border-b border-medieval-border/50 pb-3 mb-4 shrink-0">
-        <span className="text-[10px] font-mono tracking-wider text-medieval-gold uppercase font-bold">Mercado Real de Valdevez</span>
-        <h2 className="text-2xl font-serif font-bold text-medieval-gold leading-none mt-1">Arsenal & Liça de Treino</h2>
-        <p className="text-xs text-medieval-text/80 font-serif italic mt-1">
-          "Armai vosso cavaleiro com o melhor aço das margens do Vez e aprimorai vossa sela."
-        </p>
+      <div className="border-b border-medieval-border/50 pb-3 mb-4 shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <span className="text-[10px] font-mono tracking-wider text-medieval-gold uppercase font-bold">Mercado Real de Valdevez</span>
+          <h2 className="text-2xl font-serif font-bold text-medieval-gold leading-none mt-1">Arsenal & Liça de Treino</h2>
+          <p className="text-xs text-medieval-text/80 font-serif italic mt-1">
+            "Armai vosso cavaleiro com o melhor aço das margens do Vez e aprimorai vossa sela."
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 self-start sm:self-center">
+          <div className="flex items-center gap-1.5 bg-medieval-dark/80 px-3 py-1.5 rounded-lg border border-medieval-border/40 text-xs font-serif font-bold shadow-sm">
+            <Coins className="w-4 h-4 text-medieval-gold" />
+            <span className="text-medieval-text/60">Moedas:</span>
+            <span className="text-medieval-gold-light">{player.coins}</span>
+          </div>
+          <div className="flex items-center gap-1.5 bg-medieval-dark/80 px-3 py-1.5 rounded-lg border border-medieval-border/40 text-xs font-serif font-bold shadow-sm">
+            <Award className="w-4 h-4 text-medieval-gold-light" />
+            <span className="text-medieval-text/60">Honra:</span>
+            <span className="text-medieval-gold-light">{player.honor}</span>
+          </div>
+          <div className="flex items-center gap-1.5 bg-medieval-dark/80 px-3 py-1.5 rounded-lg border border-medieval-border/40 text-xs font-serif font-bold shadow-sm">
+            <Sparkles className="w-4 h-4 text-sky-300" />
+            <span className="text-medieval-text/60">Influência:</span>
+            <span className="text-sky-300">{player.influence}</span>
+          </div>
+        </div>
       </div>
 
       {/* Categories Horizontal Navigation */}
@@ -131,9 +170,18 @@ export default function Shop({ player, onPurchase }: ShopProps) {
         {/* Shelf Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredItems.map(item => {
+            const isTraining = item.category === 'training';
             const owned = isPurchased(item.id);
             const equipped = isEquipped(item.id);
-            const canAfford = player.coins >= item.cost;
+            const currency = item.costCurrency || 'coins';
+            const canAfford = currency === 'influence'
+              ? player.influence >= item.cost
+              : currency === 'honor'
+              ? player.honor >= item.cost
+              : player.coins >= item.cost;
+            
+            // Count how many times they purchased this training
+            const timesTrained = player.purchasedItems.filter(id => id === item.id).length;
 
             let bonusLabel = "";
             let bonusIcon = <Swords className="w-4 h-4 text-red-400" />;
@@ -154,7 +202,7 @@ export default function Shop({ player, onPurchase }: ShopProps) {
                 className={`p-4 rounded-xl border bg-medieval-dark/40 hover:bg-medieval-dark/60 transition-all flex flex-col justify-between shadow-sm relative ${
                   equipped
                     ? 'border-emerald-600 ring-2 ring-emerald-500/20'
-                    : owned
+                    : owned && !isTraining
                     ? 'border-medieval-border/50'
                     : 'border-medieval-border/30'
                 }`}
@@ -166,10 +214,17 @@ export default function Shop({ player, onPurchase }: ShopProps) {
                   </span>
                 )}
 
-                {/* Owned but not equipped tag */}
-                {owned && !equipped && item.category !== 'training' && (
+                {/* Owned but not equipped tag (non-training items) */}
+                {owned && !equipped && !isTraining && (
                   <span className="absolute top-2.5 right-2.5 inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-serif bg-sky-950/40 text-sky-400 border border-sky-800/60">
                     Adquirido
+                  </span>
+                )}
+
+                {/* Training rank indicator badge */}
+                {isTraining && timesTrained > 0 && (
+                  <span className="absolute top-2.5 right-2.5 inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[9px] font-serif font-bold bg-medieval-gold/20 text-medieval-gold border border-medieval-border/40">
+                    <Award className="w-3 h-3" /> Nível {timesTrained}
                   </span>
                 )}
 
@@ -191,29 +246,15 @@ export default function Shop({ player, onPurchase }: ShopProps) {
                   {/* Purchase Button / Equip Button */}
                   {equipped ? (
                     <span className="text-xs text-emerald-400 font-serif font-bold">Em Uso</span>
-                  ) : owned && item.category !== 'training' ? (
+                  ) : owned && !isTraining ? (
                     <button
                       onClick={() => handleEquipItem(item)}
                       className="flex items-center gap-1 text-xs font-serif font-bold text-sky-300 bg-sky-950/40 hover:bg-sky-950/60 px-2.5 py-1.5 rounded-lg border border-sky-800/60 cursor-pointer transition-all"
                     >
                       Equipar
                     </button>
-                  ) : item.category === 'training' ? (
-                    /* Training can be bought multiple times */
-                    <button
-                      onClick={() => handleBuyItem(item)}
-                      disabled={!canAfford}
-                      className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-serif font-bold border cursor-pointer transition-all ${
-                        canAfford
-                          ? 'bg-medieval-gold text-medieval-bg border-medieval-border hover:bg-medieval-gold-light shadow-xs font-black'
-                          : 'bg-medieval-dark/40 text-medieval-text/30 border-medieval-border/50 cursor-not-allowed'
-                      }`}
-                    >
-                      <Coins className="w-3.5 h-3.5 shrink-0" />
-                      Treinar ({item.cost})
-                    </button>
                   ) : (
-                    /* Weapon/Armor/Mount purchase button */
+                    /* General dynamic purchase button */
                     <button
                       onClick={() => handleBuyItem(item)}
                       disabled={!canAfford}
@@ -223,8 +264,17 @@ export default function Shop({ player, onPurchase }: ShopProps) {
                           : 'bg-medieval-dark/40 text-medieval-text/30 border-medieval-border/50 cursor-not-allowed'
                       }`}
                     >
-                      <Coins className="w-3.5 h-3.5 shrink-0" />
-                      Comprar ({item.cost})
+                      {currency === 'influence' ? (
+                        <Sparkles className={`w-3.5 h-3.5 shrink-0 ${canAfford ? 'text-medieval-bg' : 'text-medieval-text/30'}`} />
+                      ) : currency === 'honor' ? (
+                        <Award className={`w-3.5 h-3.5 shrink-0 ${canAfford ? 'text-medieval-bg' : 'text-medieval-text/30'}`} />
+                      ) : (
+                        <Coins className={`w-3.5 h-3.5 shrink-0 ${canAfford ? 'text-medieval-bg' : 'text-medieval-text/30'}`} />
+                      )}
+                      <span>
+                        {isTraining ? 'Treinar' : 'Comprar'} ({item.cost}{' '}
+                        {currency === 'influence' ? 'Infl.' : currency === 'honor' ? 'Honra' : 'Moedas'})
+                      </span>
                     </button>
                   )}
                 </div>

@@ -13,6 +13,7 @@ interface KnightSpriteProps {
   isImpact: boolean;
   isVictory: boolean;
   isDefeat: boolean;
+  faction: 'portucalense' | 'leao';
 }
 
 export default function KnightSprite({
@@ -20,12 +21,22 @@ export default function KnightSprite({
   isCharging,
   isImpact,
   isVictory,
-  isDefeat
+  isDefeat,
+  faction
 }: KnightSpriteProps) {
   const [imageError, setImageError] = useState(false);
 
+  // Check if this specific knight should be styled as Portucalense or Leão
+  const isPortucalense = faction === 'portucalense';
+
   // Fallback to spritesheet or SVG if the image fails to load
-  const gifSrc = side === 'player' ? guerreiroPortucal : guerreiroCastela;
+  const gifSrc = isPortucalense ? guerreiroPortucal : guerreiroCastela;
+
+  // Determine if the image needs to be flipped horizontally.
+  // - guerreiro-portucal.png naturally faces RIGHT.
+  // - guerreiro-castela.png naturally faces LEFT.
+  // Both face towards the center natively, so they do not need to be flipped.
+  const shouldFlip = false;
 
   // CSS Animation classes
   let animationClass = "transition-all duration-1000 ease-in-out ";
@@ -38,9 +49,11 @@ export default function KnightSprite({
       ? 'translate-x-[145%] scale-110 rotate-3'
       : '-translate-x-[145%] scale-110 -rotate-3';
   } else if (isVictory) {
-    animationClass += 'translate-y-[-10px] scale-105 duration-300 animate-bounce';
+    animationClass += 'translate-y-[-5%] scale-105 duration-300 animate-bounce';
   } else if (isDefeat) {
-    animationClass += 'rotate-12 translate-y-[15px] opacity-75 duration-500';
+    animationClass += side === 'player'
+      ? 'rotate-[-75deg] translate-y-[15%] -translate-x-[10%] opacity-40 grayscale brightness-50 contrast-75 duration-700'
+      : 'rotate-[75deg] translate-y-[15%] translate-x-[10%] opacity-40 grayscale brightness-50 contrast-75 duration-700';
   } else {
     animationClass += 'translate-x-0 translate-y-0 scale-100';
   }
@@ -62,7 +75,7 @@ export default function KnightSprite({
         <img
           id={`knight-img-${side}`}
           src={gifSrc}
-          alt={side === 'player' ? 'Guerreiro Portucalense (D. Afonso Henriques)' : 'Guerreiro de Leão e Castela (D. Afonso VII)'}
+          alt={isPortucalense ? 'Guerreiro Portucalense' : 'Guerreiro do Reino de Leão'}
           referrerPolicy="no-referrer"
           className="h-full w-auto filter drop-shadow-[0_8px_8px_rgba(0,0,0,0.5)] relative z-10"
           style={{
@@ -70,6 +83,7 @@ export default function KnightSprite({
             width: 'auto',
             objectFit: 'contain',
             objectPosition: 'center bottom',
+            transform: shouldFlip ? 'scaleX(-1)' : 'none',
           }}
           onError={() => setImageError(true)}
         />
@@ -78,7 +92,7 @@ export default function KnightSprite({
         <div 
           id={`knight-fallback-${side}`}
           className={`relative w-full h-full flex items-center justify-center rounded-2xl border-2 p-2 bg-gradient-to-b ${
-            side === 'player'
+            isPortucalense
               ? 'from-sky-950/90 to-slate-900/95 border-sky-400/50 shadow-[0_0_20px_rgba(56,189,248,0.2)]'
               : 'from-amber-950/90 to-slate-900/95 border-amber-500/50 shadow-[0_0_20px_rgba(245,158,11,0.2)]'
           }`}
@@ -98,20 +112,20 @@ export default function KnightSprite({
             {/* Horse Body */}
             <path
               d="M 15,55 C 20,40 35,38 45,45 C 55,50 65,48 72,55 C 75,58 75,65 65,68 C 55,70 30,70 20,68 C 12,66 10,60 15,55 Z"
-              fill={side === 'player' ? '#708090' : '#8B7355'} // Slate vs Brown horse
+              fill={isPortucalense ? '#708090' : '#8B7355'} // Slate vs Brown horse
             />
             {/* Horse Legs */}
-            <path d="M 22,65 L 18,80" stroke={side === 'player' ? '#506070' : '#6B5335'} strokeWidth="4" strokeLinecap="round" className={isCharging ? 'animate-pulse' : ''} />
-            <path d="M 32,65 L 30,78" stroke={side === 'player' ? '#506070' : '#6B5335'} strokeWidth="4" strokeLinecap="round" className={isCharging ? 'animate-pulse' : ''} />
-            <path d="M 52,65 L 56,80" stroke={side === 'player' ? '#405060' : '#5B4325'} strokeWidth="4" strokeLinecap="round" className={isCharging ? 'animate-pulse' : ''} />
-            <path d="M 62,65 L 68,78" stroke={side === 'player' ? '#405060' : '#5B4325'} strokeWidth="4" strokeLinecap="round" className={isCharging ? 'animate-pulse' : ''} />
+            <path d="M 22,65 L 18,80" stroke={isPortucalense ? '#506070' : '#6B5335'} strokeWidth="4" strokeLinecap="round" className={isCharging ? 'animate-pulse' : ''} />
+            <path d="M 32,65 L 30,78" stroke={isPortucalense ? '#506070' : '#6B5335'} strokeWidth="4" strokeLinecap="round" className={isCharging ? 'animate-pulse' : ''} />
+            <path d="M 52,65 L 56,80" stroke={isPortucalense ? '#405060' : '#5B4325'} strokeWidth="4" strokeLinecap="round" className={isCharging ? 'animate-pulse' : ''} />
+            <path d="M 62,65 L 68,78" stroke={isPortucalense ? '#405060' : '#5B4325'} strokeWidth="4" strokeLinecap="round" className={isCharging ? 'animate-pulse' : ''} />
 
             {/* Horse Head */}
             <path
               d="M 68,52 L 78,42 C 82,38 88,42 85,48 L 78,56 Z"
-              fill={side === 'player' ? '#708090' : '#8B7355'}
+              fill={isPortucalense ? '#708090' : '#8B7355'}
             />
-            <path d="M 80,43 L 84,33" stroke={side === 'player' ? '#506070' : '#6B5335'} strokeWidth="3" strokeLinecap="round" /> {/* Ear */}
+            <path d="M 80,43 L 84,33" stroke={isPortucalense ? '#506070' : '#6B5335'} strokeWidth="3" strokeLinecap="round" /> {/* Ear */}
 
             {/* Knight Armor (Silver) */}
             {/* Torso */}
@@ -121,12 +135,12 @@ export default function KnightSprite({
             <circle cx="42" cy="18" r="8" fill="#9CA3AF" stroke="#4B5563" strokeWidth="1.5" />
             {/* Visor slit */}
             <path d="M 40,17 L 46,17" stroke="#1F2937" strokeWidth="2.5" strokeLinecap="round" />
-            <path d="M 41,14 Q 45,8 48,12" stroke={side === 'player' ? '#3b82f6' : '#eab308'} strokeWidth="2" fill="none" /> {/* Plume */}
+            <path d="M 41,14 Q 45,8 48,12" stroke={isPortucalense ? '#3b82f6' : '#eab308'} strokeWidth="2" fill="none" /> {/* Plume */}
 
             {/* Shield */}
             <path
               d="M 28,32 C 38,32 44,38 42,50 C 40,58 35,62 28,62 C 21,62 16,58 14,50 C 12,38 18,32 28,32 Z"
-              fill={side === 'player' ? '#1d4ed8' : '#ca8a04'} // Royal blue vs Dark golden
+              fill={isPortucalense ? '#1d4ed8' : '#ca8a04'} // Royal blue vs Dark golden
               stroke="#F3F4F6"
               strokeWidth="2"
             />
@@ -153,7 +167,7 @@ export default function KnightSprite({
 
           {/* Subtitle label indicating fallback in elegant styling */}
           <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-black/60 px-2 py-0.5 rounded text-[10px] font-mono text-gray-300 border border-white/10 whitespace-nowrap">
-            {side === 'player' ? 'Cavaleiro de Valdevez' : 'Adversário'}
+            {isPortucalense ? 'Condado Portucalense' : 'Reino de Leão'}
           </div>
         </div>
       )}

@@ -16,7 +16,12 @@ import { shopItems } from '../data/shopItems';
 import KnightSprite from './KnightSprite';
 import guerreiroPortucal from '../../assets/guerreiro-portucal.png';
 import guerreiroCastela from '../../assets/guerreiro-castela.png';
-import fundoCombate from '../../assets/bg_combat.png';
+import fullHdTorneio from '../../assets/full_hd_torneio.png';
+import nivel1Torneio from '../../assets/nivel1_torneio.png';
+import nivel2Torneio from '../../assets/nivel2_torneio.png';
+import nivel3Torneio from '../../assets/nivel3_torneio.png';
+import nivel4Torneio from '../../assets/nivel4_torneio.png';
+import nivel5Torneio from '../../assets/nivel5_torneio.png';
 import {
   Shield,
   Swords,
@@ -88,7 +93,7 @@ export default function BattleArena({
   const getStrategyDetails = (strat: CombatStrategy): string => {
     switch (strat) {
       case 'ataque_frontal': return "+25% Ataque, -10% Defesa, -5% Velocidade (Consome 20 de Energia). Vence Investida Rápida.";
-      case 'defesa_firme': return "+30% Defesa, -10% Ataque, -10% Velocidade (Consome 10 de Energia). Vence Ataque Frontal.";
+      case 'defesa_firme': return "+30% Defesa, -10% Ataque, -10% Velocidade (Recupera +15 de Energia!). Vence Ataque Frontal.";
       case 'investida_rapida': return "+30% Velocidade, +10% Ataque, -15% Precisão (Consome 18 de Energia). Vence Mira Precisa.";
       case 'mira_precisa': return "+35% Precisão, -10% Velocidade, -5% Defesa (Consome 15 de Energia). Vence Defesa Firme.";
       case 'finta_contra_ataque': return "+5% Atq, +10% Def, +10% Vel (Consome 22 de Energia). Vence Ataque Frontal, Fraco contra Mira Precisa.";
@@ -135,12 +140,43 @@ export default function BattleArena({
     setShowPassSummary(false);
     setActiveCommentary('Os ginetes arrancam sob os gritos do público, as lanças apontadas...');
 
-    // Determine enemy strategy intelligently (65% preferred, 35% another)
+    // Determine enemy strategy intelligently (Track patterns to counter the player!)
     let enemyStrategy: CombatStrategy = location.preferredStrategy;
-    if (Math.random() > 0.65) {
-      const allStrats: CombatStrategy[] = ['ataque_frontal', 'defesa_firme', 'investida_rapida', 'mira_precisa', 'finta_contra_ataque'];
-      const filtered = allStrats.filter(s => s !== location.preferredStrategy);
-      enemyStrategy = filtered[Math.floor(Math.random() * filtered.length)];
+    
+    // If we have previous rounds, enemy AI gets smart and has a 50% chance to counter the player's last strategy!
+    const lastResult = battle.passResults[battle.passResults.length - 1];
+    if (lastResult) {
+      const lastPlayerStrategy = lastResult.playerStrategy;
+      const randVal = Math.random();
+      
+      if (randVal < 0.50) {
+        // AI Counter choice: Find strategies that are a "disadvantage" for the player (meaning a win for enemy strategy)
+        const counterStrategies: CombatStrategy[] = [];
+        const allStrats: CombatStrategy[] = ['ataque_frontal', 'defesa_firme', 'investida_rapida', 'mira_precisa', 'finta_contra_ataque'];
+        
+        allStrats.forEach(s => {
+          if (getStrategyMatchup(lastPlayerStrategy, s) === 'disadvantage') {
+            counterStrategies.push(s);
+          }
+        });
+        
+        if (counterStrategies.length > 0) {
+          enemyStrategy = counterStrategies[Math.floor(Math.random() * counterStrategies.length)];
+        } else {
+          enemyStrategy = location.preferredStrategy;
+        }
+      } else if (randVal < 0.80) {
+        enemyStrategy = location.preferredStrategy;
+      } else {
+        const allStrats: CombatStrategy[] = ['ataque_frontal', 'defesa_firme', 'investida_rapida', 'mira_precisa', 'finta_contra_ataque'];
+        enemyStrategy = allStrats[Math.floor(Math.random() * allStrats.length)];
+      }
+    } else {
+      // First round: 75% preferredStrategy, 25% random
+      if (Math.random() > 0.75) {
+        const allStrats: CombatStrategy[] = ['ataque_frontal', 'defesa_firme', 'investida_rapida', 'mira_precisa', 'finta_contra_ataque'];
+        enemyStrategy = allStrats[Math.floor(Math.random() * allStrats.length)];
+      }
     }
 
     // Wait 1.4 seconds for contact
@@ -155,6 +191,14 @@ export default function BattleArena({
 
       // Wait 1.2s in impact before showing passage calculation
       setTimeout(() => {
+        const previousResult = battle.passResults[battle.passResults.length - 1];
+        const isPlayerDesequilibrado = previousResult 
+          ? (previousResult.outcome === 'defeat' && previousResult.enemyScore >= previousResult.playerScore + 12)
+          : false;
+        const isEnemyDesequilibrado = previousResult 
+          ? (previousResult.outcome === 'victory' && previousResult.playerScore >= previousResult.enemyScore + 12)
+          : false;
+
         const result = calculateJoustPassage(
           battle.currentRound,
           player,
@@ -163,7 +207,9 @@ export default function BattleArena({
           enemyStrategy,
           challengeMode,
           playerStamina,
-          enemyStamina
+          enemyStamina,
+          isPlayerDesequilibrado,
+          isEnemyDesequilibrado
         );
 
         // Deduct stamina and store new state
@@ -206,7 +252,9 @@ export default function BattleArena({
     }
   };
 
-  const isPlayerWinner = battle.playerRoundsWon >= battle.enemyRoundsWon;
+  const totalPlayerScore = battle.passResults.reduce((acc, curr) => acc + curr.playerScore, 0);
+  const totalEnemyScore = battle.passResults.reduce((acc, curr) => acc + curr.enemyScore, 0);
+  const isPlayerWinner = totalPlayerScore >= totalEnemyScore;
 
   // Final exit callback back to campaign map
   const handleFinishCampaignAction = () => {
@@ -460,6 +508,10 @@ export default function BattleArena({
     );
   }
 
+  // Determine winning and losing faction of the last pass result
+  const lastResult = battle.passResults[battle.passResults.length - 1];
+  const playerFaction = player.faction || 'portucalense';
+
   // Render 2: FIGHTING AND COMBAT ARENA
   return (
     <div
@@ -480,7 +532,9 @@ export default function BattleArena({
         /* Minimalist top bar showing only knight names after a fight to maximize screen space */
         <div className="flex justify-between items-center bg-black/75 backdrop-blur-md py-2.5 px-6 rounded-xl border border-medieval-border/40 mb-2 relative z-10 shrink-0 animate-fade-in shadow-2xl">
           <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-sky-400 shadow-[0_0_6px_#38bdf8]" />
+            <div className={`w-2.5 h-2.5 rounded-full ${
+              player.faction === 'leao' ? 'bg-amber-400 shadow-[0_0_6px_#fbbf24]' : 'bg-sky-400 shadow-[0_0_6px_#38bdf8]'
+            }`} />
             <span className="font-serif font-black text-medieval-gold text-xs md:text-sm tracking-wider uppercase">{player.name}</span>
           </div>
           <div className="flex flex-col items-center">
@@ -489,7 +543,9 @@ export default function BattleArena({
           </div>
           <div className="flex items-center gap-2">
             <span className="font-serif font-black text-medieval-gold text-xs md:text-sm tracking-wider uppercase">{location.enemyName}</span>
-            <div className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_6px_#fbbf24]" />
+            <div className={`w-2.5 h-2.5 rounded-full ${
+              player.faction === 'leao' ? 'bg-sky-400 shadow-[0_0_6px_#38bdf8]' : 'bg-amber-400 shadow-[0_0_6px_#fbbf24]'
+            }`} />
           </div>
         </div>
       ) : (
@@ -521,9 +577,11 @@ export default function BattleArena({
             {/* Player Name, Score and Stamina */}
             <div className="md:col-span-2 text-left md:pl-2">
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-full bg-sky-950/80 border-2 border-sky-400 flex items-center justify-center overflow-hidden shrink-0 relative shadow-inner">
+                <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center overflow-hidden shrink-0 relative shadow-inner ${
+                  player.faction === 'leao' ? 'bg-amber-950/80 border-amber-400' : 'bg-sky-950/80 border-sky-400'
+                }`}>
                   <img
-                    src={guerreiroPortucal}
+                    src={player.faction === 'leao' ? guerreiroCastela : guerreiroPortucal}
                     alt={player.name}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-top"
@@ -531,18 +589,29 @@ export default function BattleArena({
                 </div>
                 <div className="flex-1 min-w-0">
                   <h4 className="font-bold text-medieval-gold truncate text-sm leading-none mb-1">{player.name}</h4>
-                  <span className="text-[10px] text-medieval-text/50 font-mono">Cavaleiro do Reino</span>
+                  <span className="text-[10px] text-medieval-text/50 font-mono">
+                    {player.faction === 'leao' ? 'Reino de Leão' : 'Condado Portucalense'}
+                  </span>
                 </div>
               </div>
-              <div className="flex gap-1.5 mt-1.5">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className={`w-3.5 h-3.5 rounded-full border border-medieval-gold/50 ${
-                      i < battle.playerRoundsWon ? 'bg-medieval-gold shadow-[0_0_6px_#c29d44]' : 'bg-medieval-dark'
-                    }`}
-                  />
-                ))}
+              <div className="flex justify-between items-center mt-1.5 bg-black/40 px-2.5 py-1 rounded-lg border border-medieval-border/20">
+                <div className="flex gap-1.5 items-center">
+                  <span className="text-[9px] text-medieval-text/40 uppercase tracking-widest font-mono mr-1">Rondas:</span>
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className={`w-3.5 h-3.5 rounded-full border border-medieval-gold/50 ${
+                        i < battle.playerRoundsWon ? 'bg-medieval-gold shadow-[0_0_8px_#c29d44]' : 'bg-medieval-dark'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-bold text-medieval-gold uppercase tracking-wider">Pontos:</span>
+                  <span className="font-mono text-sm font-black text-sky-400 drop-shadow-[0_0_6px_rgba(56,189,248,0.4)]">
+                    {totalPlayerScore} <span className="text-[9px] font-normal text-medieval-text/50 lowercase">pts</span>
+                  </span>
+                </div>
               </div>
               {/* Stamina bar */}
               <div className="mt-3">
@@ -563,8 +632,24 @@ export default function BattleArena({
 
             {/* VS Divider */}
             <div className="md:col-span-1 flex flex-col items-center justify-center border-y md:border-y-0 md:border-x border-medieval-border/30 py-2 md:py-0 md:px-2">
-              <span className="text-medieval-gold font-black text-xl italic tracking-wider">VS</span>
-              <span className="text-[10px] text-medieval-text/40 font-mono mt-0.5">Torneio</span>
+              <span className="text-medieval-gold font-black text-xl italic tracking-wider leading-none">VS</span>
+              {battle.passResults.length > 0 ? (
+                <div className="mt-1 flex flex-col gap-0.5 font-mono text-[9px] text-medieval-text/60 bg-black/45 px-1.5 py-0.5 rounded border border-medieval-border/10">
+                  {battle.passResults.map((res, idx) => {
+                    const diff = res.playerScore - res.enemyScore;
+                    const diffText = diff > 0 ? `+${diff}` : diff < 0 ? `${diff}` : `Empate`;
+                    const diffColor = diff > 0 ? 'text-emerald-400' : diff < 0 ? 'text-red-400' : 'text-amber-400';
+                    return (
+                      <div key={idx} className="flex flex-col items-center leading-none border-b border-medieval-border/10 last:border-b-0 py-0.5">
+                        <span className="font-black text-[9px] text-medieval-gold-light">P{idx + 1}: {res.playerScore} - {res.enemyScore}</span>
+                        <span className={`text-[8px] font-extrabold ${diffColor}`}>{diffText}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <span className="text-[10px] text-medieval-text/40 font-mono mt-0.5">Torneio</span>
+              )}
             </div>
 
             {/* Enemy Name, Score and Stamina */}
@@ -572,26 +657,39 @@ export default function BattleArena({
               <div className="flex items-center gap-3 mb-2 justify-end">
                 <div className="flex-1 min-w-0">
                   <h4 className="font-bold text-medieval-gold truncate text-sm leading-none mb-1">{location.enemyName}</h4>
-                  <span className="text-[10px] text-medieval-text/50 font-mono">Adversário (Nível {location.enemyLevel})</span>
+                  <span className="text-[10px] text-medieval-text/50 font-mono">
+                    {player.faction === 'leao' ? 'Condado Portucalense' : 'Reino de Leão'} (Nível {location.enemyLevel})
+                  </span>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-amber-950/80 border-2 border-amber-400 flex items-center justify-center overflow-hidden shrink-0 relative shadow-inner">
+                <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center overflow-hidden shrink-0 relative shadow-inner ${
+                  player.faction === 'leao' ? 'bg-sky-950/80 border-sky-400' : 'bg-amber-950/80 border-amber-400'
+                }`}>
                   <img
-                    src={guerreiroCastela}
+                    src={player.faction === 'leao' ? guerreiroPortucal : guerreiroCastela}
                     alt={location.enemyName}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-top"
                   />
                 </div>
               </div>
-              <div className="flex gap-1.5 mt-1.5 justify-end">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className={`w-3.5 h-3.5 rounded-full border border-medieval-gold/50 ${
-                      i < battle.enemyRoundsWon ? 'bg-medieval-gold shadow-[0_0_6px_#c29d44]' : 'bg-medieval-dark'
-                    }`}
-                  />
-                ))}
+              <div className="flex justify-between items-center mt-1.5 bg-black/40 px-2.5 py-1 rounded-lg border border-medieval-border/20 flex-row-reverse">
+                <div className="flex gap-1.5 items-center justify-end">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className={`w-3.5 h-3.5 rounded-full border border-medieval-gold/50 ${
+                        i < battle.enemyRoundsWon ? 'bg-medieval-gold shadow-[0_0_8px_#c29d44]' : 'bg-medieval-dark'
+                      }`}
+                    />
+                  ))}
+                  <span className="text-[9px] text-medieval-text/40 uppercase tracking-widest font-mono ml-1">Rondas:</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-mono text-sm font-black text-red-400 drop-shadow-[0_0_6px_rgba(248,113,113,0.4)]">
+                    {totalEnemyScore} <span className="text-[9px] font-normal text-medieval-text/50 lowercase">pts</span>
+                  </span>
+                  <span className="text-[10px] font-bold text-medieval-gold uppercase tracking-wider">Pontos:</span>
+                </div>
               </div>
               {/* Stamina bar */}
               <div className="mt-3 text-right">
@@ -616,25 +714,60 @@ export default function BattleArena({
       {/* Main Jousting Arena Field */}
       {battle.status !== 'finished' ? (
         <div
-          className="relative w-full overflow-hidden rounded-2xl border-2 border-medieval-border shadow-2xl select-none mx-auto"
-          style={{
-            height: 'clamp(390px, 45vh, 590px)',
-            aspectRatio: '21 / 8',
-          }}
+          className={`arena relative w-full overflow-hidden rounded-2xl border-2 border-medieval-border shadow-2xl select-none mx-auto joust-arena ${
+            Number(location.difficulty) === 1 ? 'arena-level1' :
+            Number(location.difficulty) === 2 ? 'arena-level2' :
+            Number(location.difficulty) === 3 ? 'arena-level3' :
+            Number(location.difficulty) === 4 ? 'arena-level4' :
+            Number(location.difficulty) === 5 ? 'arena-level5' : ''
+          }`}
         >
-          {/* Background Image Absolute */}
-          <img
-            src={fundoCombate}
-            alt="Campo de Combate"
-            referrerPolicy="no-referrer"
-            className="absolute inset-0"
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              objectPosition: 'center bottom',
-            }}
-          />
+          {/* Responsive Background Images for Art Direction using CSS Container Queries */}
+          <div className="absolute inset-0 joust-bg-container pointer-events-none">
+            {Number(location.difficulty) === 1 ? (
+              <img
+                src={nivel1Torneio}
+                alt="Campo de Combate Nível 1"
+                referrerPolicy="no-referrer"
+                className="absolute inset-0 w-full h-full object-cover object-bottom"
+              />
+            ) : Number(location.difficulty) === 2 ? (
+              <img
+                src={nivel2Torneio}
+                alt="Campo de Combate Nível 2"
+                referrerPolicy="no-referrer"
+                className="absolute inset-0 w-full h-full object-cover object-bottom"
+              />
+            ) : Number(location.difficulty) === 3 ? (
+              <img
+                src={nivel3Torneio}
+                alt="Campo de Combate Nível 3"
+                referrerPolicy="no-referrer"
+                className="absolute inset-0 w-full h-full object-cover object-bottom"
+              />
+            ) : Number(location.difficulty) === 4 ? (
+              <img
+                src={nivel4Torneio}
+                alt="Campo de Combate Nível 4"
+                referrerPolicy="no-referrer"
+                className="absolute inset-0 w-full h-full object-cover object-bottom"
+              />
+            ) : Number(location.difficulty) === 5 ? (
+              <img
+                src={nivel5Torneio}
+                alt="Campo de Combate Nível 5"
+                referrerPolicy="no-referrer"
+                className="absolute inset-0 w-full h-full object-cover object-bottom"
+              />
+            ) : (
+              <img
+                src={fullHdTorneio}
+                alt="Campo de Combate"
+                referrerPolicy="no-referrer"
+                className="absolute inset-0 w-full h-full object-cover object-bottom"
+              />
+            )}
+          </div>
 
           {/* Subtle vignette/shading overlay so characters pop */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none z-10" />
@@ -653,12 +786,12 @@ export default function BattleArena({
             )}
           </div>
 
-          {/* Player Knight (Left, advances Right, sitting exactly on ground percentage) */}
+          {/* Player/Enemy Knight (Left Side - Player, advances Right) */}
           <div
-            id="knight-player-container"
-            className="absolute left-[20%] bottom-[2%] z-20 transition-all duration-300"
+            id="knight-left-container"
+            className="knight-left z-20 transition-all duration-300"
             style={{
-              height: 'clamp(180px, 50%, 300px)',
+              height: '55%',
               aspectRatio: '1 / 1',
             }}
           >
@@ -666,17 +799,18 @@ export default function BattleArena({
               side="player"
               isCharging={battle.status === 'charging'}
               isImpact={battle.status === 'impact'}
-              isVictory={battle.status === 'showingResult' && battle.passResults[battle.passResults.length - 1]?.outcome === 'victory'}
-              isDefeat={battle.status === 'showingResult' && battle.passResults[battle.passResults.length - 1]?.outcome === 'defeat'}
+              isVictory={battle.status === 'showingResult' && lastResult?.outcome === 'victory'}
+              isDefeat={battle.status === 'showingResult' && lastResult?.outcome === 'defeat'}
+              faction={playerFaction}
             />
           </div>
 
-          {/* Enemy Knight (Right, advances Left, sitting exactly on ground percentage) */}
+          {/* Player/Enemy Knight (Right Side - Enemy, advances Left) */}
           <div
-            id="knight-enemy-container"
-            className="absolute right-[20%] bottom-[2%] z-20 transition-all duration-300"
+            id="knight-right-container"
+            className="knight-right z-20 transition-all duration-300"
             style={{
-              height: 'clamp(180px, 50%, 300px)',
+              height: '55%',
               aspectRatio: '1 / 1',
             }}
           >
@@ -684,8 +818,9 @@ export default function BattleArena({
               side="enemy"
               isCharging={battle.status === 'charging'}
               isImpact={battle.status === 'impact'}
-              isVictory={battle.status === 'showingResult' && battle.passResults[battle.passResults.length - 1]?.outcome === 'defeat'}
-              isDefeat={battle.status === 'showingResult' && battle.passResults[battle.passResults.length - 1]?.outcome === 'victory'}
+              isVictory={battle.status === 'showingResult' && lastResult?.outcome === 'defeat'}
+              isDefeat={battle.status === 'showingResult' && lastResult?.outcome === 'victory'}
+              faction={playerFaction === 'portucalense' ? 'leao' : 'portucalense'}
             />
           </div>
         </div>
@@ -761,6 +896,42 @@ export default function BattleArena({
               </div>
             </div>
           )}
+
+          {/* Final Scoreboard with Point Differences and Epic Sensation */}
+          <div className="bg-black/60 border border-medieval-border/40 rounded-xl p-3 max-w-md mx-auto my-3 font-mono">
+            <div className="text-[10px] uppercase tracking-widest text-medieval-gold mb-1 font-serif font-bold">Placar Final das Justas</div>
+            <div className="flex justify-between items-center px-4 py-2">
+              <div className="text-left">
+                <span className="text-xs text-sky-400 font-serif font-bold block truncate max-w-[120px]">{player.name}</span>
+                <span className="text-2xl font-black text-sky-300">{totalPlayerScore} <span className="text-[10px] font-normal text-medieval-text/50 lowercase">pts</span></span>
+              </div>
+              <div className="text-center font-serif text-xs px-2 border-x border-medieval-border/20 text-medieval-text/40">
+                <div className="font-bold text-medieval-gold">{battle.playerRoundsWon} - {battle.enemyRoundsWon}</div>
+                <div className="text-[9px]">Rondas</div>
+              </div>
+              <div className="text-right">
+                <span className="text-xs text-red-400 font-serif font-bold block truncate max-w-[120px]">{location.enemyName}</span>
+                <span className="text-2xl font-black text-red-400">{totalEnemyScore} <span className="text-[10px] font-normal text-medieval-text/50 lowercase">pts</span></span>
+              </div>
+            </div>
+            {/* Dynamic epic description based on score difference */}
+            <div className="text-xs font-serif italic text-medieval-gold-light mt-2 border-t border-medieval-border/15 pt-2 px-1 leading-relaxed text-center">
+              {(() => {
+                const diff = Math.abs(totalPlayerScore - totalEnemyScore);
+                if (totalPlayerScore > totalEnemyScore) {
+                  if (diff <= 5) return `⚔️ Uma vitória pela margem mínima! Triunfastes por apenas ${diff} pontos numa disputa de tirar o fôlego!`;
+                  if (diff <= 15) return `🛡️ Uma vitória suada! Com perícia e bravura, impusestes o vosso ritmo por ${diff} pontos de diferença.`;
+                  return `🔥 Vitória esmagadora! Destroçastes por completo a sela adversária, vencendo por uns impressionantes ${diff} pontos!`;
+                } else if (totalPlayerScore < totalEnemyScore) {
+                  if (diff <= 5) return `💔 Uma derrota dolorosa! Estivestes a meros ${diff} pontos de vencer esta justa fantástica.`;
+                  if (diff <= 15) return `🐎 O oponente impôs-se com firmeza, batendo-vos por ${diff} pontos. Precisais de melhor tática e treino.`;
+                  return `💀 Uma derrota pesada nas mãos de ${location.enemyName} por uma diferença de ${diff} pontos. Visitai o Arsenal!`;
+                } else {
+                  return `🤝 Um empate perfeito de ${totalPlayerScore} pontos! Ambos os ginetes partilharam a glória do choque de lanças.`;
+                }
+              })()}
+            </div>
+          </div>
 
           {/* Detailed results with exact values */}
           <div className="border-t border-medieval-border/40 pt-3 mt-3 shrink-0">
