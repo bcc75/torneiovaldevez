@@ -8,7 +8,7 @@ import { Player } from '../types';
 const STORAGE_KEY = 'torneio_valdevez_save';
 
 export const INITIAL_PLAYER: Player = {
-  name: "D. Bruno de Quyntas",
+  name: "",
   level: 1,
   xp: 0,
   coins: 80,
@@ -27,7 +27,9 @@ export const INITIAL_PLAYER: Player = {
   conqueredLocations: [],
   unlockedCards: [],
   victories: 0,
-  defeats: 0
+  defeats: 0,
+  cumulativeHonor: 0,
+  faction: "portucalense"
 };
 
 export function saveGame(player: Player): void {
@@ -43,8 +45,9 @@ export function loadGame(): Player {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Ensure any newly added fields are backward compatible
-      return { ...INITIAL_PLAYER, ...parsed };
+      // Ensure any newly added fields are backward compatible, and force faction to be portucalense (blue knight)
+      const cumulativeHonor = parsed.cumulativeHonor !== undefined ? parsed.cumulativeHonor : (parsed.honor || 0);
+      return { ...INITIAL_PLAYER, ...parsed, cumulativeHonor, faction: "portucalense" };
     }
   } catch (error) {
     console.error("Erro ao carregar progresso do localStorage:", error);

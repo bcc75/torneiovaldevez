@@ -48,7 +48,7 @@ export const matchupMatrix: Record<CombatStrategy, Record<CombatStrategy, 'advan
 // Stamina cost for each strategy
 export function getStrategyStaminaCost(strategy: CombatStrategy): number {
   switch (strategy) {
-    case 'defesa_firme': return 10;
+    case 'defesa_firme': return -15; // Recupera +15 de Energia em vez de consumir!
     case 'mira_precisa': return 15;
     case 'investida_rapida': return 18;
     case 'ataque_frontal': return 20;
@@ -72,6 +72,18 @@ export function getChallengeModifiers(mode: ChallengeMode) {
     case 'honrado':
     default:
       return { enemyPower: 1.0, rewardCoins: 1.0, rewardHonor: 1.0 };
+  }
+}
+
+// Get dynamic scaling multiplier based on location difficulty level
+export function getDifficultyPowerMultiplier(difficulty: number): number {
+  switch (difficulty) {
+    case 1: return 1.00;
+    case 2: return 1.30; // +30% stats
+    case 3: return 1.65; // +65% stats
+    case 4: return 2.05; // +105% stats (double!)
+    case 5: return 2.50; // +150% stats (2.5x!)
+    default: return 1.00;
   }
 }
 
@@ -149,22 +161,28 @@ export function applyStrategyModifiers(
 // Apply stamina penalties
 export function applyStaminaPenalties(
   stats: { attack: number, defense: number, speed: number, precision: number },
-  staminaValue: number
+  staminaValue: number,
+  maxStamina: number = 100
 ) {
   const modified = { ...stats };
-  if (staminaValue < 10) {
-    modified.attack *= 0.60;
-    modified.defense *= 0.60;
-    modified.speed *= 0.60;
-    modified.precision *= 0.60;
-  } else {
-    if (staminaValue < 50) {
-      modified.speed *= 0.85;
-    }
-    if (staminaValue < 25) {
-      modified.attack *= 0.80;
-      modified.precision *= 0.80;
-    }
+  const ratio = staminaValue / maxStamina;
+
+  if (ratio < 0.20) {
+    // Exaustão severa
+    modified.attack *= 0.50;
+    modified.defense *= 0.50;
+    modified.speed *= 0.50;
+    modified.precision *= 0.50;
+  } else if (ratio < 0.40) {
+    // Exaustão pesada
+    modified.attack *= 0.70;
+    modified.defense *= 0.80;
+    modified.speed *= 0.65;
+    modified.precision *= 0.75;
+  } else if (ratio < 0.60) {
+    // Cansaço moderado
+    modified.attack *= 0.85;
+    modified.speed *= 0.80;
   }
   return modified;
 }
@@ -246,13 +264,14 @@ export function calculatePlayabilityIndex(
   const pStatsStrat = applyStrategyModifiers(pStats, strategy);
   const pBaseline = pStatsStrat.attack * 1.1 + pStatsStrat.defense * 0.7 + pStatsStrat.speed * 0.8 + pStatsStrat.precision * 1.0;
 
-  // Enemy stats
+  // Enemy stats with difficulty power multiplier
   const enemyMods = getChallengeModifiers(challengeMode);
+  const diffPower = getDifficultyPowerMultiplier(location.difficulty);
   const eStats = {
-    attack: location.enemyAttack * enemyMods.enemyPower,
-    defense: location.enemyDefense * enemyMods.enemyPower,
-    speed: location.enemySpeed * enemyMods.enemyPower,
-    precision: location.enemyPrecision * enemyMods.enemyPower,
+    attack: location.enemyAttack * enemyMods.enemyPower * diffPower,
+    defense: location.enemyDefense * enemyMods.enemyPower * diffPower,
+    speed: location.enemySpeed * enemyMods.enemyPower * diffPower,
+    precision: location.enemyPrecision * enemyMods.enemyPower * diffPower,
   };
   const eStatsStrat = applyStrategyModifiers(eStats, location.preferredStrategy);
   const eBaseline = eStatsStrat.attack * 1.1 + eStatsStrat.defense * 0.7 + eStatsStrat.speed * 0.8 + eStatsStrat.precision * 1.0;
@@ -315,18 +334,21 @@ export function calculateJoustPassage(
   enemyStrategy: CombatStrategy,
   challengeMode: ChallengeMode,
   currentPlayerStamina: number,
-  currentEnemyStamina: number
+  currentEnemyStamina: number,
+  isPlayerDesequilibrado: boolean = false,
+  isEnemyDesequilibrado: boolean = false
 ): JoustPassResult {
   // 1. Get player stats
   const pStatsBase = getPlayerTotalStats(player, shopItems);
   
-  // 2. Get enemy stats based on location and challenge mode modifier
+  // 2. Get enemy stats based on location, challenge mode modifier, and difficulty scaling
   const enemyMods = getChallengeModifiers(challengeMode);
+  const diffPower = getDifficultyPowerMultiplier(location.difficulty);
   const eStatsBase = {
-    attack: location.enemyAttack * enemyMods.enemyPower,
-    defense: location.enemyDefense * enemyMods.enemyPower,
-    speed: location.enemySpeed * enemyMods.enemyPower,
-    precision: location.enemyPrecision * enemyMods.enemyPower,
+    attack: location.enemyAttack * enemyMods.enemyPower * diffPower,
+    defense: location.enemyDefense * enemyMods.enemyPower * diffPower,
+    speed: location.enemySpeed * enemyMods.enemyPower * diffPower,
+    precision: location.enemyPrecision * enemyMods.enemyPower * diffPower,
     stamina: location.enemyStamina
   };
 
@@ -334,16 +356,29 @@ export function calculateJoustPassage(
   const staminaSpentPlayer = getStrategyStaminaCost(playerStrategy);
   const staminaSpentEnemy = getStrategyStaminaCost(enemyStrategy);
 
-  const playerStaminaAfter = Math.max(0, currentPlayerStamina - staminaSpentPlayer);
-  const enemyStaminaAfter = Math.max(0, currentEnemyStamina - staminaSpentEnemy);
+  const playerMaxStamina = player.stamina || 100;
+  const enemyMaxStamina = location.enemyStamina;
+
+  const playerStaminaAfter = Math.max(0, Math.min(playerMaxStamina, currentPlayerStamina - staminaSpentPlayer));
+  const enemyStaminaAfter = Math.max(0, Math.min(enemyMaxStamina, currentEnemyStamina - staminaSpentEnemy));
 
   // 4. Apply stamina penalties on stats BEFORE strategy modifications
-  const pStatsAfterStamina = applyStaminaPenalties(pStatsBase, playerStaminaAfter);
-  const eStatsAfterStamina = applyStaminaPenalties(eStatsBase, enemyStaminaAfter);
+  const pStatsAfterStamina = applyStaminaPenalties(pStatsBase, playerStaminaAfter, playerMaxStamina);
+  const eStatsAfterStamina = applyStaminaPenalties(eStatsBase, enemyStaminaAfter, enemyMaxStamina);
 
   // 5. Apply strategy modifiers
   const pStatsFinal = applyStrategyModifiers(pStatsAfterStamina, playerStrategy);
   const eStatsFinal = applyStrategyModifiers(eStatsAfterStamina, enemyStrategy);
+
+  // Apply stance break / desequilíbrio penalties
+  if (isPlayerDesequilibrado) {
+    pStatsFinal.defense *= 0.75;
+    pStatsFinal.speed *= 0.75;
+  }
+  if (isEnemyDesequilibrado) {
+    eStatsFinal.defense *= 0.75;
+    eStatsFinal.speed *= 0.75;
+  }
 
   // 6. Get strategy matchup
   const advantage = getStrategyMatchup(playerStrategy, enemyStrategy);
@@ -368,11 +403,13 @@ export function calculateJoustPassage(
     enemyRoll
   );
 
-  // Apply advantage modifiers
+  // Apply decisive advantage modifiers
   if (advantage === 'advantage') {
-    playerScore = Math.round(playerScore * 1.15);
+    playerScore = Math.round(playerScore * 1.25);
+    enemyScore = Math.round(enemyScore * 0.85);
   } else if (advantage === 'disadvantage') {
-    playerScore = Math.round(playerScore * 0.90);
+    playerScore = Math.round(playerScore * 0.80);
+    enemyScore = Math.round(enemyScore * 1.20);
   }
 
   // 8. Outcome
@@ -386,7 +423,13 @@ export function calculateJoustPassage(
   }
 
   // 9. Generate commentary
-  const commentary = getStrategyCommentary(playerStrategy, enemyStrategy, advantage, outcome, player.name, location.enemyName);
+  let commentary = getStrategyCommentary(playerStrategy, enemyStrategy, advantage, outcome, player.name, location.enemyName);
+
+  if (isPlayerDesequilibrado && outcome === 'defeat') {
+    commentary = `[DESEQUILIBRADO] Ainda cambaleando do golpe devastador anterior, não conseguistes suster o embate! ` + commentary;
+  } else if (isEnemyDesequilibrado && outcome === 'victory') {
+    commentary = `[OPONENTE DESEQUILIBRADO] Aproveitando o desequilíbrio nítido de ${location.enemyName}, desferistes uma investida fulminante! ` + commentary;
+  }
 
   return {
     round,
