@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Player, Location } from './types';
 import { loadGame, saveGame, resetGame, INITIAL_PLAYER } from './utils/storage';
 import { locations } from './data/locations';
@@ -31,6 +31,32 @@ export default function App() {
   const [fightingLocation, setFightingLocation] = useState<Location | null>(null);
   const [hasSavedGame, setHasSavedGame] = useState(false);
 
+  // Dynamic locations based on chosen player faction (makes final boss/texts appropriate)
+  const dynamicLocations = useMemo(() => {
+    return locations.map(loc => {
+      if (loc.id === 'veigas_matanca') {
+        if (player.faction === 'leao') {
+          return {
+            ...loc,
+            description: "O célebre lugar das Veigas da Matança, onde decorreu o combate decisivo contra as forças do Infante D. Afonso Henriques.",
+            enemyName: "D. Afonso Henriques",
+            enemyTitle: "Comandante do Condado Portucalense",
+            historicalNote: "Foi nas Veigas da Matança que se decidiu a autonomia territorial num combate épico de justa entre as hostes de Portugal e Leão."
+          };
+        } else {
+          return {
+            ...loc,
+            description: "O célebre lugar das Veigas da Matança, onde decorreu o combate decisivo contra as forças do próprio rei D. Afonso VII.",
+            enemyName: "Rei D. Afonso VII",
+            enemyTitle: "O Imperador de Leão e Castela",
+            historicalNote: "Foi nas Veigas da Matança que se decidiu a autonomia nacional num combate épico contra as hostes imperiais do rei Afonso VII."
+          };
+        }
+      }
+      return loc;
+    });
+  }, [player.faction]);
+
   // Background music audio instances setup
   const [geralAudio] = useState(() => {
     const el = new Audio(geralMusic);
@@ -52,6 +78,7 @@ export default function App() {
     const saved = localStorage.getItem('torneio_valdevez_save');
     if (saved) {
       setHasSavedGame(true);
+      setPlayer(loadGame());
     }
   }, []);
 
@@ -150,7 +177,8 @@ export default function App() {
   const handleStartNewGame = (knightName: string) => {
     const freshPlayer: Player = {
       ...INITIAL_PLAYER,
-      name: knightName
+      name: knightName,
+      faction: 'portucalense'
     };
     handlePlayerUpdate(freshPlayer);
     setGameState('play');
@@ -216,8 +244,10 @@ export default function App() {
     const newVictories = player.victories + (won ? 1 : 0);
     const newDefeats = player.defeats + (won ? 0 : 1);
 
-    // Calculate dynamic level up
-    const potentialNewLevel = Math.floor(newHonor / 20) + 1;
+    // Calculate dynamic level up based on total cumulative honor earned
+    const currentCumulativeHonor = player.cumulativeHonor !== undefined ? player.cumulativeHonor : player.honor;
+    const newCumulativeHonor = currentCumulativeHonor + honorGained;
+    const potentialNewLevel = Math.max(player.level, Math.floor(newCumulativeHonor / 20) + 1);
     const levelUpOccurred = potentialNewLevel > player.level;
     
     // Stat points on level-up
@@ -243,6 +273,7 @@ export default function App() {
       honor: newHonor,
       influence: newInfluence,
       level: potentialNewLevel,
+      cumulativeHonor: newCumulativeHonor,
       statPoints: newStatPoints,
       conqueredLocations: newConquered,
       unlockedCards: newCards,
@@ -298,7 +329,7 @@ export default function App() {
           setActiveTab(tab);
           setSelectedLocation(null); // Clear selected location when switching tabs
         }}
-        totalLocations={locations.length}
+        totalLocations={dynamicLocations.length}
         isPlaying={isPlaying}
         onToggleMusic={() => setIsPlaying(!isPlaying)}
         volume={volume}
@@ -332,7 +363,7 @@ export default function App() {
               selectedCampaign === null ? (
                 <div className="h-full min-h-0 overflow-hidden">
                   <MapView
-                    locations={locations}
+                    locations={dynamicLocations}
                     player={player}
                     selectedLocation={selectedLocation}
                     onSelectLocation={(loc) => setSelectedLocation(loc)}
@@ -345,7 +376,7 @@ export default function App() {
                   {/* Map Graphic (2 cols on large) */}
                   <div className="lg:col-span-2 h-full min-h-0 overflow-hidden">
                     <MapView
-                      locations={locations}
+                      locations={dynamicLocations}
                       player={player}
                       selectedLocation={selectedLocation}
                       onSelectLocation={(loc) => setSelectedLocation(loc)}

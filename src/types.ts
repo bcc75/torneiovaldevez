@@ -27,6 +27,8 @@ export interface Player {
   unlockedCards: string[]; // IDs of unlocked cards
   victories: number;
   defeats: number;
+  cumulativeHonor?: number;
+  faction?: 'portucalense' | 'leao';
 }
 
 export interface Location {
@@ -63,6 +65,7 @@ export interface ShopItem {
   bonusType: 'attack' | 'defense' | 'speed';
   bonusValue: number;
   description: string;
+  costCurrency?: 'coins' | 'honor' | 'influence';
 }
 
 export interface HistoryCard {

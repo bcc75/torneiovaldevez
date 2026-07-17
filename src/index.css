@@ -59,3 +59,126 @@
   width: 100%;
 }
 
+/* Battle Arena Combat Background Zoom & Positioning with Container Queries */
+.joust-arena {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  max-height: 430px;
+  min-height: 240px; /* Prevents being too small on narrow mobile portrait */
+  overflow: hidden;
+  container-type: size;
+  container-name: joust;
+}
+
+/* For Level 1: 2400x800 -> 3:1 aspect ratio */
+.joust-arena.arena-level1 {
+  aspect-ratio: 2400 / 800; /* 3:1 */
+}
+
+/* For Level 2: 2400x800 -> 3:1 aspect ratio */
+.joust-arena.arena-level2 {
+  aspect-ratio: 2400 / 800; /* 3:1 */
+}
+
+/* For Level 3: 2172x724 -> 3:1 aspect ratio */
+.joust-arena.arena-level3 {
+  aspect-ratio: 2172 / 724; /* 3:1 */
+}
+
+/* For Level 4: 2172x724 -> 3:1 aspect ratio */
+.joust-arena.arena-level4 {
+  aspect-ratio: 2172 / 724; /* 3:1 */
+}
+
+/* For Level 5: 1912x823 -> 2.32:1 aspect ratio */
+.joust-arena.arena-level5 {
+  aspect-ratio: 1912 / 823;
+}
+
+/* For other levels, responsive aspect ratios based on screen/container widths */
+.joust-arena:not(.arena-level1):not(.arena-level2):not(.arena-level3):not(.arena-level4):not(.arena-level5) {
+  /* Default Mobile: 2400x1080 -> 2.22:1 aspect ratio */
+  aspect-ratio: 2400 / 1080;
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .joust-arena:not(.arena-level1):not(.arena-level2):not(.arena-level3):not(.arena-level4):not(.arena-level5) {
+    /* Tablet: 2560x1600 -> 1.6:1 (16:10) aspect ratio */
+    aspect-ratio: 2560 / 1600;
+  }
+}
+
+@media (min-width: 1024px) {
+  .joust-arena:not(.arena-level1):not(.arena-level2):not(.arena-level3):not(.arena-level4):not(.arena-level5) {
+    /* Full HD Desktop: 1920x1080 -> 16:9 aspect ratio */
+    aspect-ratio: 1920 / 1080;
+  }
+}
+
+.joust-bg-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.joust-bg-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center bottom;
+  display: none;
+}
+
+/* Default state: mobile_torneio background is visible */
+.joust-bg-mobile {
+  display: block;
+}
+
+/* Container Queries for Art Direction based on Container Width */
+
+/* Tablet layout (container width is 600px or more) */
+@container joust (min-width: 600px) {
+  .joust-bg-mobile {
+    display: none;
+  }
+  .joust-bg-tablet {
+    display: block;
+  }
+  .joust-bg-fullhd {
+    display: none;
+  }
+}
+
+/* Desktop Full HD / Widescreen layout (container width is 1024px or more) */
+@container joust (min-width: 1024px) {
+  .joust-bg-mobile {
+    display: none;
+  }
+  .joust-bg-tablet {
+    display: none;
+  }
+  .joust-bg-fullhd {
+    display: block;
+  }
+}
+
+/* Knights Relative Positioning */
+.knight-left {
+  position: absolute;
+  left: 18%;
+  bottom: 5%;
+  z-index: 20;
+}
+
+.knight-right {
+  position: absolute;
+  right: 18%;
+  bottom: 5%;
+  z-index: 20;
+}
+
