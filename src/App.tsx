@@ -29,6 +29,7 @@ export default function App() {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [selectedCampaign, setSelectedCampaign] = useState<number | null>(null);
   const [fightingLocation, setFightingLocation] = useState<Location | null>(null);
+  const [preparingBattleLocation, setPreparingBattleLocation] = useState<Location | null>(null);
   const [hasSavedGame, setHasSavedGame] = useState(false);
 
   // Dynamic locations based on chosen player faction (makes final boss/texts appropriate)
@@ -94,8 +95,8 @@ export default function App() {
     let intervalId: any;
 
     const inCombat = fightingLocation !== null;
-    const targetGeralVol = isPlaying && !inCombat ? volume : 0;
-    const targetCombateVol = isPlaying && inCombat ? volume : 0;
+    const targetGeralVol = isPlaying && !inCombat ? volume * 0.4 : 0;
+    const targetCombateVol = isPlaying && inCombat ? volume * 0.35 : 0; // Combat music is slightly softer to really emphasize clash and cheer
 
     // Trigger play safely if target volume > 0 and audio is paused
     if (targetGeralVol > 0 && geralAudio.paused) {
@@ -221,12 +222,14 @@ export default function App() {
     setSelectedLocation(null);
     setSelectedCampaign(null);
     setFightingLocation(null);
+    setPreparingBattleLocation(null);
     setIsPlaying(false); // Silence music on reset
   };
 
   // Active Battle trigger
   const handleChallenge = (location: Location) => {
     setFightingLocation(location);
+    setPreparingBattleLocation(null);
   };
 
   // Battle over resolution
@@ -283,6 +286,7 @@ export default function App() {
 
     handlePlayerUpdate(updatedPlayer);
     setFightingLocation(null);
+    setPreparingBattleLocation(null);
     setSelectedLocation(null);
 
     // Check campaign win condition (conquering all 20 locations)
@@ -326,6 +330,10 @@ export default function App() {
         player={player}
         activeTab={activeTab}
         onTabChange={(tab) => {
+          if (fightingLocation) {
+            setPreparingBattleLocation(fightingLocation);
+            setFightingLocation(null);
+          }
           setActiveTab(tab);
           setSelectedLocation(null); // Clear selected location when switching tabs
         }}
@@ -346,9 +354,14 @@ export default function App() {
             <BattleArena
               location={fightingLocation}
               player={player}
+              volume={volume}
               onBattleFinished={handleBattleFinished}
-              onCancel={() => setFightingLocation(null)}
+              onCancel={() => {
+                setFightingLocation(null);
+                setPreparingBattleLocation(null);
+              }}
               onVisitShop={() => {
+                setPreparingBattleLocation(fightingLocation);
                 setFightingLocation(null);
                 setActiveTab('shop');
               }}
@@ -356,25 +369,47 @@ export default function App() {
           </div>
         ) : (
           /* Normal game tab views */
-          <div id="game-tab-view-wrapper" className="w-full h-full min-h-0 overflow-hidden">
+          <div id="game-tab-view-wrapper" className="w-full h-full min-h-0 overflow-hidden flex flex-col">
             
-            {/* MAP TAB */}
-            {activeTab === 'map' && (
-              selectedCampaign === null ? (
-                <div className="h-full min-h-0 overflow-hidden">
-                  <MapView
-                    locations={dynamicLocations}
-                    player={player}
-                    selectedLocation={selectedLocation}
-                    onSelectLocation={(loc) => setSelectedLocation(loc)}
-                    selectedCampaign={selectedCampaign}
-                    onSelectCampaign={setSelectedCampaign}
-                  />
+            {/* Return to Battle Preparation Banner */}
+            {preparingBattleLocation && (
+              <div className="bg-medieval-panel border-2 border-medieval-gold text-medieval-text px-4 py-2.5 rounded-xl shadow-lg mb-3 flex flex-col sm:flex-row items-center justify-between gap-3 animate-fade-in relative overflow-hidden shrink-0">
+                <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-medieval-gold to-transparent" />
+                <div className="flex items-center gap-2.5">
+                  <span className="text-lg">⚔️</span>
+                  <div className="text-left">
+                    <span className="font-mono text-[9px] uppercase tracking-wider text-medieval-gold font-bold block leading-none">Combate Suspenso</span>
+                    <span className="text-xs font-serif font-black text-medieval-text">
+                      Estais a meio da preparação para o torneio de <span className="text-medieval-gold-light">{preparingBattleLocation.name}</span>!
+                    </span>
+                  </div>
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full min-h-0 overflow-hidden">
-                  {/* Map Graphic (2 cols on large) */}
-                  <div className="lg:col-span-2 h-full min-h-0 overflow-hidden">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setFightingLocation(preparingBattleLocation);
+                      setPreparingBattleLocation(null);
+                    }}
+                    className="px-3.5 py-1.5 bg-medieval-gold hover:bg-medieval-gold-light text-medieval-bg font-serif font-black text-xs rounded-lg shadow border border-medieval-border cursor-pointer transition-all active:scale-95"
+                  >
+                    Regressar à Preparação
+                  </button>
+                  <button
+                    onClick={() => setPreparingBattleLocation(null)}
+                    className="p-1.5 text-medieval-text/50 hover:text-red-400 hover:bg-red-950/20 rounded-lg cursor-pointer transition-colors text-xs font-bold"
+                    title="Cancelar combate"
+                  >
+                    Cancelar ✕
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="flex-1 min-h-0 w-full">
+              {/* MAP TAB */}
+              {activeTab === 'map' && (
+                selectedCampaign === null ? (
+                  <div className="h-full min-h-0 overflow-hidden">
                     <MapView
                       locations={dynamicLocations}
                       player={player}
@@ -384,67 +419,81 @@ export default function App() {
                       onSelectCampaign={setSelectedCampaign}
                     />
                   </div>
-
-                  {/* Location Sidebar Details (1 col on large) */}
-                  <div className="lg:col-span-1 h-full min-h-0 overflow-hidden">
-                    {selectedLocation ? (
-                      <LocationPanel
-                        location={selectedLocation}
+                ) : (
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full min-h-0 overflow-hidden">
+                    {/* Map Graphic (2 cols on large) */}
+                    <div className="lg:col-span-2 h-full min-h-0 overflow-hidden">
+                      <MapView
+                        locations={dynamicLocations}
                         player={player}
-                        onChallenge={handleChallenge}
-                        onClose={() => setSelectedLocation(null)}
+                        selectedLocation={selectedLocation}
+                        onSelectLocation={(loc) => setSelectedLocation(loc)}
+                        selectedCampaign={selectedCampaign}
+                        onSelectCampaign={setSelectedCampaign}
                       />
-                    ) : (
-                      /* Elegant placeholder when no location is chosen */
-                      <div className="bg-[#FAF3DC]/90 text-amber-950 rounded-2xl border-4 border-[#7A4B24]/40 p-6 shadow-xl flex flex-col items-center justify-center text-center h-full relative overflow-hidden">
-                        <div className="w-12 h-12 rounded-full border-4 border-dashed border-amber-900/20 flex items-center justify-center text-amber-900/30 text-2xl font-bold mb-3 select-none">
-                          ❈
+                    </div>
+
+                    {/* Location Sidebar Details (1 col on large) */}
+                    <div className="lg:col-span-1 h-full min-h-0 overflow-hidden">
+                      {selectedLocation ? (
+                        <LocationPanel
+                          location={selectedLocation}
+                          player={player}
+                          onChallenge={handleChallenge}
+                          onClose={() => setSelectedLocation(null)}
+                        />
+                      ) : (
+                        /* Elegant placeholder when no location is chosen */
+                        <div className="bg-[#FAF3DC]/90 text-amber-950 rounded-2xl border-4 border-[#7A4B24]/40 p-6 shadow-xl flex flex-col items-center justify-center text-center h-full relative overflow-hidden">
+                          <div className="w-12 h-12 rounded-full border-4 border-dashed border-amber-900/20 flex items-center justify-center text-amber-900/30 text-2xl font-bold mb-3 select-none">
+                            ❈
+                          </div>
+                          <h3 className="font-serif font-black text-lg text-amber-900 leading-tight">Explorai as Terras</h3>
+                          <p className="text-xs text-amber-950/70 max-w-xs mt-2 leading-relaxed">
+                            "Selecione uma das freguesias no caminho para contemplar os seus monumentos, registos históricos e desafiar o cavaleiro local para um combate honroso."
+                          </p>
                         </div>
-                        <h3 className="font-serif font-black text-lg text-amber-900 leading-tight">Explorai as Terras</h3>
-                        <p className="text-xs text-amber-950/70 max-w-xs mt-2 leading-relaxed">
-                          "Selecione uma das freguesias no caminho para contemplar os seus monumentos, registos históricos e desafiar o cavaleiro local para um combate honroso."
-                        </p>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
+                )
+              )}
+
+              {/* SHOP TAB */}
+              {activeTab === 'shop' && (
+                <div className="h-full min-h-0 overflow-hidden">
+                  <Shop
+                    player={player}
+                    onPurchase={handlePlayerUpdate}
+                  />
                 </div>
-              )
-            )}
+              )}
 
-            {/* SHOP TAB */}
-            {activeTab === 'shop' && (
-              <div className="h-full min-h-0 overflow-hidden">
-                <Shop
-                  player={player}
-                  onPurchase={handlePlayerUpdate}
-                />
-              </div>
-            )}
+              {/* CARDS TAB */}
+              {activeTab === 'cards' && (
+                <div className="h-full min-h-0 overflow-hidden">
+                  <CardsView player={player} />
+                </div>
+              )}
 
-            {/* CARDS TAB */}
-            {activeTab === 'cards' && (
-              <div className="h-full min-h-0 overflow-hidden">
-                <CardsView player={player} />
-              </div>
-            )}
+              {/* CHARACTER PANEL TAB */}
+              {activeTab === 'panel' && (
+                <div className="h-full min-h-0 overflow-hidden">
+                  <PlayerPanel
+                    player={player}
+                    onEquipChange={handlePlayerUpdate}
+                    onResetGame={handleResetGame}
+                  />
+                </div>
+              )}
 
-            {/* CHARACTER PANEL TAB */}
-            {activeTab === 'panel' && (
-              <div className="h-full min-h-0 overflow-hidden">
-                <PlayerPanel
-                  player={player}
-                  onEquipChange={handlePlayerUpdate}
-                  onResetGame={handleResetGame}
-                />
-              </div>
-            )}
-
-            {/* ABOUT TAB */}
-            {activeTab === 'about' && (
-              <div className="h-full min-h-0 overflow-hidden">
-                <AboutView />
-              </div>
-            )}
+              {/* ABOUT TAB */}
+              {activeTab === 'about' && (
+                <div className="h-full min-h-0 overflow-hidden">
+                  <AboutView />
+                </div>
+              )}
+            </div>
 
           </div>
         )}
