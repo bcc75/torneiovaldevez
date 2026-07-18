@@ -22,6 +22,8 @@ import nivel2Torneio from '../../assets/nivel2_torneio.png';
 import nivel3Torneio from '../../assets/nivel3_torneio.png';
 import nivel4Torneio from '../../assets/nivel4_torneio.png';
 import nivel5Torneio from '../../assets/nivel5_torneio.png';
+import clashSound from '../../assets/clash.mp3';
+import cheerSound from '../../assets/cheer.mp3';
 import {
   Shield,
   Swords,
@@ -43,6 +45,7 @@ import {
 interface BattleArenaProps {
   location: Location;
   player: Player;
+  volume?: number;
   onBattleFinished: (won: boolean, coinsGained: number, honorGained: number, influenceGained: number) => void;
   onCancel: () => void;
   onVisitShop?: () => void;
@@ -51,6 +54,7 @@ interface BattleArenaProps {
 export default function BattleArena({
   location,
   player,
+  volume,
   onBattleFinished,
   onCancel,
   onVisitShop
@@ -186,6 +190,13 @@ export default function BattleArena({
       setShowFlash(true);
       setActiveCommentary('CHOQUE DE LANÇAS!');
 
+      // Play clash.mp3
+      const clashAudio = new Audio(clashSound);
+      clashAudio.volume = volume !== undefined ? volume : 0.25;
+      clashAudio.play().catch(err => {
+        console.log("Could not play clash sound:", err);
+      });
+
       setTimeout(() => setShowFlash(false), 200);
       setTimeout(() => setShakeScreen(false), 500);
 
@@ -249,6 +260,15 @@ export default function BattleArena({
       setPhase('finished');
       setBattle(prev => ({ ...prev, status: 'finished' }));
       setShowPassSummary(false);
+      
+      // Play victory sound if player won
+      if (isPlayerWinner) {
+        const cheerAudio = new Audio(cheerSound);
+        cheerAudio.volume = volume !== undefined ? volume : 0.25;
+        cheerAudio.play().catch(err => {
+          console.log("Could not play cheer sound:", err);
+        });
+      }
     }
   };
 
